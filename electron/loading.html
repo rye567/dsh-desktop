@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>DeepSeek Harness 启动中</title>
+<style>
+  body { margin: 0; height: 100vh; display: flex; flex-direction: column;
+         align-items: center; justify-content: center; gap: 16px;
+         background: #0b0d12; color: #c9d1d9;
+         font: 14px/1.6 -apple-system, "PingFang SC", sans-serif; }
+  .spinner { width: 36px; height: 36px; border-radius: 50%;
+             border: 3px solid #30363d; border-top-color: #58a6ff;
+             animation: spin 0.9s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  #status { color: #8b949e; }
+</style>
+</head>
+<body>
+  <div class="spinner"></div>
+  <div id="status">正在启动…</div>
+  <script>
+    window.dshShell?.onBootStatus((text) => {
+      document.getElementById('status').textContent = text;
+    });
+  </script>
+</body>
+</html>
