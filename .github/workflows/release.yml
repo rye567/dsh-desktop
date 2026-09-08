@@ -15,7 +15,21 @@ permissions:
   contents: write # electron-builder 发布 Release 需要
 
 jobs:
+  # 先单独创建 Release：两个平台的 electron-builder 并行“查询或创建”
+  # 不是原子操作，不加这一步会各自建出同名 Release，资产被拆到两处。
+  create-release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Create release for tag
+        run: gh release view "$TAG" --repo "$REPO" >/dev/null 2>&1 ||
+             gh release create "$TAG" --repo "$REPO" --verify-tag --title "$TAG"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          TAG: ${{ github.ref_name }}
+
   build:
+    needs: create-release
     strategy:
       fail-fast: false
       matrix:
