@@ -36,7 +36,8 @@
       "!release/**"
     ],
     "asarUnpack": [
-      "node_modules/**"
+      "node_modules/**",
+      "electron/win-picker-patch.yml"
     ],
     "mac": {
       "category": "public.app-category.developer-tools",

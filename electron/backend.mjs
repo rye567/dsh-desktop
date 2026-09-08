@@ -23,13 +23,16 @@ export class DshBackend extends EventEmitter {
    * @param {string} opts.runtimeDir 核心运行时安装目录（userData 下）
    * @param {string} opts.npmCli    npm-cli.js 的绝对路径
    * @param {string} opts.host      监听地址（回环）
+   * @param {string} [opts.pickerPatchPath] 目录选择器覆盖层 yml 路径（win32 传入，
+   *   经 `--patch` 固定 browse 交互，绕开依赖 koffi 的原生 Win32 对话框）
    * @param {(text: string) => void} [opts.onStatus] 启动/更新状态回调
    */
-  constructor({ runtimeDir, npmCli, host, onStatus, nodeBin }) {
+  constructor({ runtimeDir, npmCli, host, pickerPatchPath, onStatus, nodeBin }) {
     super();
     this.runtimeDir = runtimeDir;
     this.npmCli = npmCli;
     this.host = host;
+    this.pickerPatchPath = pickerPatchPath ?? null;
     this.onStatus = onStatus ?? (() => {});
     // Node 运行时：默认用 Electron 主进程自身（ELECTRON_RUN_AS_NODE 模式），
     // 测试时可注入其他 Node/Electron 二进制。
@@ -139,13 +142,17 @@ export class DshBackend extends EventEmitter {
     // --expose-internals：cordis-plugin-loader 的 HMR 服务要求该标志
     //（dsh 官方启动即带它）；Electron 纯 Node 模式默认不带，缺失会导致
     // 后端就绪后崩溃（profile 中挂载了 cordis-plugin-hmr 时必现）。
-    const child = spawn(this.nodeBin,
-      ['--expose-internals', this.binPath, 'web', '--port', String(this.port), '--no-open'], {
-        env: { ...process.env, ELECTRON_RUN_AS_NODE: '1',
-               // V8 编译缓存：跨启动复用字节码，加快 dsh 核心（大量 JS）加载。
-               NODE_COMPILE_CACHE: path.join(this.runtimeDir, 'compile-cache') },
-        stdio: ['ignore', 'pipe', 'pipe'],
-      });
+    // --patch（仅 win32，必须是 web 子命令自己的选项）：目录选择器覆盖层，
+    // 见 win-picker-patch.yml 头注释。
+    const args = ['--expose-internals', this.binPath, 'web'];
+    if (this.pickerPatchPath) args.push('--patch', this.pickerPatchPath);
+    args.push('--port', String(this.port), '--no-open');
+    const child = spawn(this.nodeBin, args, {
+      env: { ...process.env, ELECTRON_RUN_AS_NODE: '1',
+             // V8 编译缓存：跨启动复用字节码，加快 dsh 核心（大量 JS）加载。
+             NODE_COMPILE_CACHE: path.join(this.runtimeDir, 'compile-cache') },
+      stdio: ['ignore', 'pipe', 'pipe'],
+    });
     this.child = child;
     child.on('exit', (code) => {
       // 非主动停止的异常退出：通知主进程决定是否重启。

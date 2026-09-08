@@ -28,6 +28,18 @@ function resolveNpmCli() {
   return path.join(base, 'node_modules', 'npm', 'bin', 'npm-cli.js');
 }
 
+// 目录选择器覆盖层（仅 win32）：上游原生 Win32 文件夹对话框依赖 koffi 原生
+// 模块，用户机上缺失时“添加工作区”必报错（deepseek-harness#30 等）。以
+// `--patch` 固定 browse 交互绕开整条 koffi 链路；dsh 子进程是纯 Node
+//（ELECTRON_RUN_AS_NODE），读不了 asar，打包后必须走 app.asar.unpacked。
+function resolvePickerPatch() {
+  if (process.platform !== 'win32') return null;
+  const base = app.isPackaged
+    ? path.join(process.resourcesPath, 'app.asar.unpacked')
+    : app.getAppPath();
+  return path.join(base, 'electron', 'win-picker-patch.yml');
+}
+
 function sendStatus(text) {
   if (win && !win.isDestroyed()) win.webContents.send('boot-status', text);
 }
@@ -37,8 +49,12 @@ async function boot() {
     runtimeDir: path.join(app.getPath('userData'), 'dsh-runtime'),
     npmCli: resolveNpmCli(),
     host: HOST,
+    pickerPatchPath: resolvePickerPatch(),
     onStatus: sendStatus,
   });
+
+  // dsh 的 stderr 原先被静默丢弃，透传到主进程控制台便于诊断 Windows 上的后端故障。
+  backend.on('log', (line) => console.warn('[dsh]', line.trimEnd()));
 
   sendStatus('检查 dsh 核心…');
   await backend.ensureInstalled();

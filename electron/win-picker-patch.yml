@@ -1,0 +1,25 @@
+# dsh-desktop（Windows）目录选择器覆盖层：经 `dsh web --patch <本文件>` 注入。
+#
+# 为什么存在：上游 dsh 的“添加工作区”在 Windows 上默认挂载原生 Win32 文件夹
+# 对话框（directory-picker-auto 按 win32 平台解析为 native），其对话框子进程
+# 依赖 koffi 原生模块（COM IFileDialog 的 FFI 绑定）。koffi 在部分用户机上
+# 安装不完整（安装脚本需联网取预编译包/本地编译，或缺 @koromix 平台伴生包，
+# 或被杀软隔离 .node），worker 启动即退出，界面报
+# “win32 folder dialog worker exited before reporting a result”，工作区无法添加。
+# 这是上游已知问题（deepseek-harness Discussion #30/#3943/#4986）。
+#
+# 此覆盖层禁用 auto 探测行，静态挂载 browse 双面（服务端目录浏览 + 对应客户端
+# 交互面），整条链路纯 JS，不依赖 koffi。macOS 的 osascript 原生选择器不受影响，
+# 壳仅在 win32 传入本文件。
+#
+# 语义说明：patch 行按 id 覆盖时不允许更换 name（引擎会因 name mismatch 跳过），
+# 因此用 disabled 关闭 auto 行，再以新 id 插入 browse 包；客户端面包名以
+# dsh-host-directory-picker-auto 的 SURFACE_PACKAGES 为准。
+- id: directory-picker
+  disabled: true
+
+- insert:
+    - id: directory-picker-browse
+      name: '@deepseek-ai/dsh-host-directory-picker-browse'
+    - id: ui-directory-picker
+      name: '@deepseek-ai/dsh-client-ui-directory-picker-browse'
