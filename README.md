@@ -22,7 +22,7 @@
 | 平台 | 文件 |
 |---|---|
 | macOS Apple Silicon | `*.arm64.dmg` |
-| macOS Intel | `*.x64.dmg`（取自 universal 包） |
+| macOS Intel | `*.x64.dmg` |
 | Windows x64 | `* Setup *.exe` |
 
 > 因当前未做代码签名：macOS 首次打开需**右键 → 打开**绕过 Gatekeeper；
@@ -47,5 +47,15 @@ npm run dist:dir        # 仅产出 .app 目录，用于本地快速验证
 
 ## 发布
 
-打 `v*` tag 推送后，GitHub Actions 会在 macOS runner 上自动构建并发布到 GitHub Release。
-发布源已在 `package.json` 与 `electron/app-updater.mjs` 中配置为 `rye567/dsh-desktop`。
+推送 `v*` tag（如 `v0.1.1`）后，GitHub Actions 会在 macOS / Windows 双平台
+runner 上自动构建并发布到 GitHub Release，安装包随 Release 公开下载：
+
+```bash
+git tag v0.1.1
+git push origin master v0.1.1
+```
+
+构建配置见 `.github/workflows/release.yml`；发布源配置在 `package.json`
+（`build.publish`）与 `electron/app-updater.mjs`（L1 更新检查）。
+发版前如需先验证打包，可在 GitHub Actions 页面手动触发 Release 工作流，
+产物仅上传为 artifact、不对外发布。
