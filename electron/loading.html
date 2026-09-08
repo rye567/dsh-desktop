@@ -5,22 +5,59 @@
 <title>DeepSeek Harness 启动中</title>
 <style>
   body { margin: 0; height: 100vh; display: flex; flex-direction: column;
-         align-items: center; justify-content: center; gap: 16px;
-         background: #0b0d12; color: #c9d1d9;
-         font: 14px/1.6 -apple-system, "PingFang SC", sans-serif; }
-  .spinner { width: 36px; height: 36px; border-radius: 50%;
-             border: 3px solid #30363d; border-top-color: #58a6ff;
-             animation: spin 0.9s linear infinite; }
-  @keyframes spin { to { transform: rotate(360deg); } }
-  #status { color: #8b949e; }
+         align-items: center; justify-content: center;
+         background: #0b0d12; color: #c9d1d9; user-select: none;
+         font: 14px/1.6 -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif; }
+  .icon { width: 96px; height: 96px; animation: breathe 2.4s ease-in-out infinite; }
+  @keyframes breathe { 0%, 100% { transform: scale(1); opacity: .9; }
+                       50% { transform: scale(1.05); opacity: 1; } }
+  h1 { margin: 20px 0 30px; font-size: 17px; font-weight: 600;
+       color: #e6edf3; letter-spacing: .3px; }
+  .bar { width: 300px; height: 6px; border-radius: 3px;
+         background: #21262d; overflow: hidden; }
+  .bar-fill { height: 100%; width: 6%; border-radius: 3px;
+              background: linear-gradient(90deg, #1f6feb, #58a6ff);
+              transition: width .45s ease; }
+  .bar-fill.error { background: #f85149; }
+  #status { margin-top: 14px; color: #8b949e; font-size: 13px; min-height: 1.6em; }
+  #status.error { color: #f85149; }
 </style>
 </head>
 <body>
-  <div class="spinner"></div>
+  <img class="icon" src="../build/icon.png" alt="" />
+  <h1>DeepSeek Harness</h1>
+  <div class="bar"><div class="bar-fill" id="fill"></div></div>
   <div id="status">正在启动…</div>
   <script>
+    const fill = document.getElementById('fill');
+    const statusEl = document.getElementById('status');
+    let pct = 6;
+    let creepTimer = null;
+    const render = () => { fill.style.width = pct + '%'; };
+
+    // 安装核心约 1-2 分钟且无真实百分比：缓慢蠕进表达“仍在推进”，70% 封顶，
+    // 等待「启动后端」「就绪」把进度推到终点。
+    function startCreep() {
+      if (creepTimer) return;
+      creepTimer = setInterval(() => { pct = Math.min(Math.max(pct, 18) + 1, 70); render(); }, 1200);
+    }
+    function stopCreep() { clearInterval(creepTimer); creepTimer = null; }
+
     window.dshShell?.onBootStatus((text) => {
-      document.getElementById('status').textContent = text;
+      statusEl.textContent = text;
+      if (/失败|异常/.test(text)) {
+        stopCreep();
+        fill.classList.add('error');
+        statusEl.classList.add('error');
+        pct = 100;
+        render();
+        return;
+      }
+      if (/安装/.test(text)) { pct = Math.max(pct, 18); startCreep(); }
+      else if (/启动/.test(text)) { stopCreep(); pct = Math.max(pct, 82); }
+      else if (/就绪/.test(text)) { stopCreep(); pct = 100; }
+      else if (/检查/.test(text)) { pct = Math.max(pct, 12); }
+      render();
     });
   </script>
 </body>

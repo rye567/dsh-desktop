@@ -33,6 +33,7 @@
     },
     "files": [
       "electron/**",
+      "build/icon.png",
       "!release/**"
     ],
     "asarUnpack": [
