@@ -1,6 +1,6 @@
 {
   "name": "dsh-desktop",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "private": true,
   "description": "DeepSeek Harness (dsh) macOS 桌面壳：内嵌 dsh web 后端，支持 npm 核心热更新",
   "main": "electron/main.mjs",
