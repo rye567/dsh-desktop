@@ -29,6 +29,11 @@
   <div class="bar"><div class="bar-fill" id="fill"></div></div>
   <div id="status">正在启动…</div>
   <script>
+    // Windows 使用新版鲸鱼图标（icon-win.png）；macOS 保持原 icon.png 不变
+    if (navigator.userAgent.includes('Windows')) {
+      document.querySelector('.icon').src = '../build/icon-win.png';
+    }
+
     const fill = document.getElementById('fill');
     const statusEl = document.getElementById('status');
     let pct = 6;

@@ -34,6 +34,7 @@
     "files": [
       "electron/**",
       "build/icon.png",
+      "build/icon-win.png",
       "!release/**"
     ],
     "asarUnpack": [

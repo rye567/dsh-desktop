@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
-# 图标生成：设计稿 → macOS 规范图标（icon.png / icon.icns）+ Windows 满幅 icon.ico
+# 图标生成：设计稿 → macOS 规范图标（icon.png / icon.icns）。
+# Windows 满幅 icon.ico 与启动页 icon-win.png 由 make-icon-win.py 从
+# icon-win-source.png（新版鲸鱼设计稿）单独生成，两套设计稿互不影响。
 #
 # 不做内容分割（旧洪水填充+侵蚀方案会在深色 Dock 上留参差黑边）：
 #   1) 自动测量设计稿中圆角卡片的边界与圆角半径（本稿面板 ~247 比背景
@@ -116,16 +118,6 @@ shutil.rmtree('icon.iconset')            # 中间产物用后即清
 print('icon.icns 完成')
 
 # ---- 4. Windows ico ----
-# Windows 图标惯例接近满幅（任务栏/资源管理器中主体应占满画布），
-# Apple 网格的 824/1024 会让 Windows 上主体偏小 ~18%，故从卡片单独
-# 放大重建 Windows 画布；macOS 的 icon.png/icns 保持 Apple 网格不变。
-WIN_CANVAS = 1024
-WIN_CARD = 968            # 主体占比 ~94.5%，四周留 ~28px 防贴边
-card = master.crop((100, 100, 100 + CARD, 100 + CARD))
-card = card.resize((WIN_CARD, WIN_CARD), Image.LANCZOS)
-win = Image.new('RGBA', (WIN_CANVAS, WIN_CANVAS), (0, 0, 0, 0))
-off = (WIN_CANVAS - WIN_CARD) // 2
-win.paste(card, (off, off))
-win.save('icon.ico', sizes=[(16, 16), (24, 24), (32, 32), (48, 48),
-                            (64, 64), (128, 128), (256, 256)])
-print('icon.ico 完成')
+# 已迁移：icon.ico / icon-win.png 改由 make-icon-win.py 从新版鲸鱼设计稿
+# （icon-win-source.png）生成；此处不再产出，避免重跑本脚本覆盖新图标。
+print('icon.ico 改由 make-icon-win.py 生成，跳过')
