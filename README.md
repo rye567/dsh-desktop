@@ -25,7 +25,10 @@
 | macOS Intel | `*.x64.dmg` |
 | Windows x64 | `* Setup *.exe` |
 
-> 因当前未做代码签名：macOS 首次打开需**右键 → 打开**绕过 Gatekeeper；
+> 未购买 Apple Developer ID（无公证），macOS 首次打开若提示**「无法验证开发者」**：
+> 右键 App → **打开**，或到 系统设置 → 隐私与安全性 → 点**「仍要打开」**；
+> 若提示**「已损坏，无法打开」**（多见于 v0.1.2 及更早的安装包），在终端执行：
+> `xattr -cr "/Applications/DeepSeek Harness.app"` 后再打开。
 > Windows 首次运行如遇 SmartScreen 拦截，点「仍要运行」。
 
 ## 开发

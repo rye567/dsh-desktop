@@ -44,7 +44,6 @@
     "mac": {
       "category": "public.app-category.developer-tools",
       "icon": "build/icon.icns",
-      "identity": null,
       "target": [
         "zip",
         "dmg"
@@ -69,6 +68,7 @@
         "repo": "dsh-desktop",
         "releaseType": "release"
       }
-    ]
+    ],
+    "afterPack": "build/afterPack.cjs"
   }
 }
