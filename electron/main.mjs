@@ -87,7 +87,7 @@ async function boot() {
   void checkAppUpdate();
 }
 
-function createWindow() {
+async function createWindow() {
   win = new BrowserWindow({
     width: 1440,
     height: 900,
@@ -109,7 +109,25 @@ function createWindow() {
     return { action: 'deny' };
   });
 
-  win.loadFile(path.join(__dirname, 'loading.html'));
+  await win.loadFile(path.join(__dirname, 'loading.html'));
+
+  // macOS 关窗不退出：点 Dock 图标/重复启动会重建窗口（boot 首启时 backend
+  // 尚为 null，走不到这里）。此时后端多半仍在运行，必须把新窗口导航到
+  // GUI，否则永远停在加载页；后端已死则就地拉起。
+  if (!backend) return;
+  if (backend.running && backend.url) {
+    try {
+      await win.loadURL(backend.url);
+    } catch { /* 后端恰在重启：restarted 事件会接管导航 */ }
+  } else if (!backend.running) {
+    sendStatus('后端未运行，正在重新启动…');
+    try {
+      const { url } = await backend.start();
+      if (!win.isDestroyed()) await win.loadURL(url);
+    } catch (err) {
+      sendStatus(`后端重启失败：${err?.message ?? err}`);
+    }
+  }
 }
 
 // macOS 惯例：单实例，重复启动聚焦已有窗口。
@@ -118,9 +136,12 @@ if (!gotLock) {
   app.quit();
 } else {
   app.on('second-instance', () => {
-    if (win) {
+    if (win && !win.isDestroyed()) {
       if (win.isMinimized()) win.restore();
       win.focus();
+    } else if (BrowserWindow.getAllWindows().length === 0) {
+      // 窗口已关但应用还在（macOS 惯例）：重建并进入 GUI，而非聚焦失效引用。
+      void createWindow();
     }
   });
 

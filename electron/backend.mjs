@@ -50,6 +50,11 @@ export class DshBackend extends EventEmitter {
     return path.join(this.runtimeDir, 'node_modules', '@deepseek-ai', 'dsh', 'lib', 'bin.js');
   }
 
+  /** dsh web 子进程是否存活（启动完成或启动中均算）。 */
+  get running() {
+    return this.child !== null && this.child.exitCode === null;
+  }
+
   /** 已安装核心版本；未安装返回 null。 */
   installedVersion() {
     try {
@@ -136,6 +141,9 @@ export class DshBackend extends EventEmitter {
   }
 
   async _start() {
+    // 幂等保护：已在运行时直接复用（窗口重建与崩溃自愈并发调用 start，
+    // 经串行队列排队后会先后到达，不挡会把第二个 dsh web 变成孤儿）。
+    if (this.running && this.url) return { port: this.port, url: this.url };
     this.stopping = false;
     this.port = await getFreePort(this.host);
     // --no-open：阻止 dsh 自动打开系统浏览器，GUI 只出现在壳窗口里。
