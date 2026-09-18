@@ -17,6 +17,10 @@ const NPM_REGISTRY = 'https://registry.npmmirror.com';
 /** npm 单次操作的最长容忍时间（安装/升级受网络影响，给足余量）。 */
 const NPM_TIMEOUT_MS = 15 * 60 * 1000;
 
+/** 启动等待上限。dsh 会随配置拉起多个 MCP 服务（如禅道/obsidian 等），
+ *  就绪耗时随插件与网络波动（实测可达 65s+），60s 量级会误判启动失败。 */
+const START_TIMEOUT_MS = 3 * 60 * 1000;
+
 export class DshBackend extends EventEmitter {
   /**
    * @param {object} opts
@@ -170,8 +174,12 @@ export class DshBackend extends EventEmitter {
     try {
       // dsh web 就绪后在 stdout 打印 “dsh web: http://host:port/?token=xxx”，
       // 该 URL 携带启动令牌（首访换取登录 Cookie），壳必须加载它而非裸根路径。
-      const urlPromise = waitForPrintedUrl(child, 60_000);
-      await waitForServer(this.host, this.port, 60_000);
+      // HTTP 可达与 URL 打印双条件并行等待，任一失败（含子进程提前退出）
+      // 立即失败，不在死后端上空等满超时。
+      const urlPromise = waitForPrintedUrl(child, START_TIMEOUT_MS);
+      const serverPromise = waitForServer(this.host, this.port, START_TIMEOUT_MS);
+      serverPromise.catch(() => {});
+      await Promise.all([serverPromise, urlPromise]);
       this.url = await urlPromise;
     } catch (err) {
       // 启动失败必须回收子进程，否则重试会覆盖引用、留下孤儿 dsh web。
@@ -205,26 +213,33 @@ export class DshBackend extends EventEmitter {
   }
 }
 
-/** 解析子进程 stdout 中 “dsh web: <url>” 一行的带令牌 URL。 */
+/** 解析子进程 stdout 中 “dsh web: <url>” 一行的带令牌 URL。
+ *  不锚定行首/行尾：dsh 按配置拉起的 MCP 服务可能向同一 stdout 打印横幅，
+ *  与 URL 行拼接或夹带 ANSI 序列时锚点匹配会失配。 */
 function waitForPrintedUrl(child, timeoutMs) {
   return new Promise((resolve, reject) => {
     let buf = '';
+    let done = false;
     const timer = setTimeout(() => {
-      cleanup();
-      reject(new Error('等待 dsh web 打印带令牌 URL 超时'));
+      finish(reject, new Error(`等待 dsh web 打印带令牌 URL 超时（${timeoutMs / 1000} 秒）`));
     }, timeoutMs);
+    const onExit = (code) => {
+      finish(reject, new Error(`dsh web 在就绪前退出（退出码 ${code}）`));
+    };
     const onData = (d) => {
       buf += d;
-      const m = buf.match(/^dsh web: (https?:\/\/\S+)$/m);
-      if (m) {
-        cleanup();
-        resolve(m[1]);
-      }
+      const m = buf.match(/dsh web: (https?:\/\/\S+)/);
+      if (m) finish(resolve, m[1]);
     };
-    const cleanup = () => {
+    const finish = (fn, value) => {
+      if (done) return;
+      done = true;
       clearTimeout(timer);
       child.stdout.off('data', onData);
+      child.off('exit', onExit);
+      fn(value);
     };
+    child.on('exit', onExit);
     child.stdout.on('data', onData);
   });
 }

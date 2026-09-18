@@ -59,7 +59,7 @@ async function boot() {
   sendStatus('检查 dsh 核心…');
   await backend.ensureInstalled();
 
-  sendStatus('启动 dsh 后端…');
+  sendStatus('启动 dsh 后端…（配置多个 MCP 插件时可能需要 1-3 分钟）');
   // dsh web 打印的 URL 携带启动令牌（首访换取登录 Cookie），必须加载它。
   const { url } = await backend.start();
   await win.loadURL(url);
