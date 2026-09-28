@@ -22,7 +22,7 @@
     "semver": "^7.7.0"
   },
   "devDependencies": {
-    "electron": "^44.2.0",
+    "electron": "44.0.0",
     "electron-builder": "^26.15.3"
   },
   "build": {
